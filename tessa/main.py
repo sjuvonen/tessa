@@ -52,6 +52,10 @@ class Snapshot:
         # Store dirs per snapshot so that new directories can be added after initial snapshot.
         self.dirs = dirs
 
+    @property
+    def id(self):
+        return path.basename(self.path)
+
 def read_profile_meta(base_dir):
     config = ConfigParser()
     config.read("%s/profile.ini" % base_dir)
@@ -96,6 +100,9 @@ def write_profile_meta(profile):
             prefix = "remote\\%d\\" % i
             config["REMOTES"][prefix + "type"] = remote.type
             config["REMOTES"][prefix + "path"] = remote.path
+
+            if remote.last_sent is not None:
+                config["REMOTES"][prefix + "last_sent"] = remote.last_sent
 
             if remote.type == RemoteProfile.TYPE_SSH:
                 config["REMOTES"][prefix + "host"] = remote.host

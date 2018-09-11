@@ -2,19 +2,18 @@ from os import mkdir, path
 from shutil import copyfile
 import subprocess
 
-def send_snapshot_local(snapshot, destination, parent=None):
+def send_snapshot_local(snapshot, remote_profile, parent=None):
     """Send/receive a snapshot to a another disk on the same machine.
 
     Keyword arguments:
     snapshot -- the Snapshot instance to transfer
-    destination -- base directory of the remote end
+    remote_profile -- the RemoteProfile entry to process
     parent -- provide parent Snapshot for incremental updates (optional)
     """
 
-    snap_id = path.basename(snapshot.path)
-    snap_dir = path.join(destination, snap_id)
+    snap_dir = path.join(remote_profile.path, snapshot.id)
 
-    subprocess.run(["btrfs", "subvolume", "create", destination])
+    subprocess.run(["btrfs", "subvolume", "create", remote_profile.path])
     mkdir(snap_dir)
 
     for dir in snapshot.dirs:
@@ -33,19 +32,19 @@ def send_snapshot_local(snapshot, destination, parent=None):
 
     # Do this last to mark that the snapshot succeeded.
     copyfile(path.join(snapshot.path, "snapshot.ini"), path.join(snap_dir, "snapshot.ini"))
+    remote_profile.last_sent = snapshot.id
 
 def send_snapshot_ssh(snapshot, remote_profile, parent=None):
     """Send/receive a snapshot to a another machine over SSH. Root access is required.
 
     Keyword arguments:
     snapshot -- the Snapshot instance to transfer
-    destination -- base directory of the remote end
+    remote_profile -- the RemoteProfile entry to process
     parent -- provide parent Snapshot for incremental updates (optional)
     """
 
     login = "root@%s" % remote_profile.host
-    snap_id = path.basename(snapshot.path)
-    snap_dir = path.join(remote_profile.path, snap_id)
+    snap_dir = path.join(remote_profile.path, snapshot.id)
 
     # NOTE: Run these separately so that "sub create" can fail without affecting the latter command.
     subprocess.run(["ssh", login, "btrfs subvolume create %s" % remote_profile.path])
@@ -66,3 +65,4 @@ def send_snapshot_ssh(snapshot, remote_profile, parent=None):
 
     # Do this last to mark that the snapshot succeeded.
     subprocess.run(["scp", path.join(snapshot.path, "snapshot.ini"), "%s:%s" % (login, snap_dir)])
+    remote_profile.last_sent = snapshot.id

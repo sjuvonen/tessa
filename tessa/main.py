@@ -87,8 +87,7 @@ def write_profile_meta(profile):
     config["SETTINGS"] = {}
     config["SETTINGS"]["name"] = profile.name
     config["SETTINGS"]["destination"] = profile.destination
-
-    config["DIRS"] = dict(["dir\\%d" % i, dir] for i, dir in enumerate(profile.dirs))
+    config["DIRS"] = dict(("dir\\%d" % i, dir) for i, dir in enumerate(profile.dirs))
 
     if profile.remotes is not None:
         config["REMOTES"] = {}
@@ -123,9 +122,8 @@ def write_snapshot_meta(snapshot):
     config = ConfigParser()
     config["SETTINGS"] = {}
     config["SETTINGS"]["path"] = snapshot.path
-    config["SETTINGS"]["time"] = snapshot.time.isoformat().split(".")[0]
-
-    config["DIRS"] = dict(["dir\\%d" % i, dir] for i, dir in enumerate(snapshot.dirs))
+    config["SETTINGS"]["time"] = snapshot.time
+    config["DIRS"] = dict(("dir\\%d" % i, dir) for i, dir in enumerate(snapshot.dirs))
 
     with open("%s/snapshot.ini" % snapshot.path, "w") as file:
         config.write(file)
@@ -138,6 +136,7 @@ def create_snapshot(profile):
     snap_time = datetime.now()
     snap_id = snap_time.strftime("%Y%m%d-%H%M%S")
     snap_dir = path.join(profile.destination, snap_id)
+    log_time = snap_time.isoformat().split(".")[0]
 
     # Safe to make read-only as root can still write anyways.
     mkdir(snap_dir, 0o550)
@@ -146,7 +145,7 @@ def create_snapshot(profile):
         dst = path.join(snap_dir, path.basename(src))
         run(["btrfs", "subvolume", "snapshot", "-r", src, dst])
 
-    snapshot = Snapshot(snap_dir, snap_time, profile.dirs)
+    snapshot = Snapshot(snap_dir, log_time, tuple(profile.dirs))
     profile.last_snapshot = snap_id
 
     write_snapshot_meta(snapshot)

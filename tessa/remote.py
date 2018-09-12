@@ -2,6 +2,15 @@ from os import mkdir, path
 from shutil import copyfile
 import subprocess
 
+def send_snapshot(snapshot, remote_profile, parent=None):
+    methods = {
+        remote_profile.TYPE_LOCAL: send_snapshot_local,
+        remote_profile.TYPE_SSH: send_snapshot_ssh
+    }
+
+    func = methods[remote_profile.type]
+    func(snapshot, remote_profile, parent)
+
 def send_snapshot_local(snapshot, remote_profile, parent=None):
     """Send/receive a snapshot to a another disk on the same machine.
 

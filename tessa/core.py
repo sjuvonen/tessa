@@ -18,13 +18,13 @@ class Profile:
         self.last_snapshot = None
 
         # List of RemoteProfile instances.
-        self.remotes = None
+        self.remotes = []
 
 class RemoteProfile:
     TYPE_LOCAL = "local"
     TYPE_SSH = "ssh"
 
-    def __init__(self, path=None, type=None, host=None):
+    def __init__(self, type=None, path=None, host=None):
         # Root directory for snaps on the RECEIVE end.
         self.path = path
 
@@ -56,9 +56,9 @@ class Snapshot:
     def id(self):
         return path.basename(self.path)
 
-def read_profile_meta(base_dir):
+def read_profile_meta(fname):
     config = ConfigParser()
-    config.read("%s/profile.ini" % base_dir)
+    config.read(fname)
 
     try:
         data = dict(config["SETTINGS"])
@@ -84,9 +84,9 @@ def read_profile_meta(base_dir):
 
         return profile
     except KeyError:
-        raise ValueError("Could not read profile from %s/profile.ini" % base_dir)
+        raise ValueError("Could not read profile from %s" % fname)
 
-def write_profile_meta(profile):
+def write_profile_meta(profile, fname):
     config = ConfigParser()
     config["SETTINGS"] = {}
     config["SETTINGS"]["name"] = profile.name
@@ -111,7 +111,7 @@ def write_profile_meta(profile):
         config["SNAPSHOT"] = {}
         config["SNAPSHOT"]["last_snapshot"] = profile.last_snapshot
 
-    with open("%s/profile.ini" % profile.destination, "w") as file:
+    with open(fname, "w") as file:
         config.write(file)
 
 def read_snapshot_meta(profile, snap_id):
@@ -144,6 +144,9 @@ def create_snapshot(profile):
     snap_id = snap_time.strftime("%Y%m%d-%H%M%S")
     snap_dir = path.join(profile.destination, snap_id)
     log_time = snap_time.isoformat().split(".")[0]
+
+    if not profile.last_snapshot:
+        init_profile(profile)
 
     # Safe to make read-only as root can still write anyways.
     mkdir(snap_dir, 0o550)

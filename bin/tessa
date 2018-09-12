@@ -1,1 +1,5 @@
-# placeholder 
+#!/usr/bin/python3
+
+from tessa.main import execute_profiles
+
+print("HELLO)

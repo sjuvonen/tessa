@@ -14,10 +14,10 @@ No installer yet.
 Commands have to be executed as root.
 
 ### Setup a profile for snapshots
-tessa new --name <profile> --dest <snapshot root> path1 path2...
+```tessa new --name <profile> --dest <snapshot root> path [path...]```
 
 ### List existing profiles
-tessa list
+```tessa list```
 
 ### Take a snapshot (executes btrfs sub snap)
-tessa snap <profile>
+```tessa snap <profile>```

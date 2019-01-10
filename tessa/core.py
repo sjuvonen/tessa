@@ -3,6 +3,8 @@ from datetime import datetime
 from os import mkdir, path
 from subprocess import run
 
+PROFILES_DIR = "/etc/tessa/profiles"
+
 class Profile:
     def __init__(self, name, dirs=[], destination=None):
         # Human-readable name of this profile.
@@ -137,7 +139,7 @@ def write_snapshot_meta(snapshot):
 
 def init_profile(profile):
     run(["btrfs", "subvolume", "create", profile.destination])
-    write_profile_meta(profile)
+    write_profile_meta(profile, path.join(PROFILES_DIR, profile.name))
 
 def create_snapshot(profile):
     snap_time = datetime.now()
@@ -159,6 +161,6 @@ def create_snapshot(profile):
     profile.last_snapshot = snap_id
 
     write_snapshot_meta(snapshot)
-    write_profile_meta(profile)
+    write_profile_meta(profile, path.join(PROFILES_DIR, profile.name))
 
     return snapshot

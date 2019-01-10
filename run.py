@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from tessa import main
+from tessa import core, main
 
 class Command:
     def run(self):
@@ -37,7 +37,19 @@ class CreateSnapshotCommand(Command):
 
     def run(self, argv):
         parsed = self.cmdparser.parse_args(argv)
-        print("SNAPSHOT", parsed)
+        profile = main.read_profile(parsed.profile)
+        snapshot = core.create_snapshot(profile)
+
+        print(f"Snapshot {profile.name} completed")
+
+        for remote in profile.remotes:
+            if remote.last_sent:
+                parent = core.read_snapshot_meta(profile, remote.last_sent)
+                print(f"Send snapshot diff since {remote.last_sent} to remote {remote.path}")
+                core.send_snapshot(snapshot, remote, parent=parent)
+            else:
+                print(f"Send base snapshot to remote {remote.path}")
+                core.send_snapshot(snapshot, remote)
 
 class Catalog:
     def __init__(self):
@@ -45,9 +57,6 @@ class Catalog:
 
     def list(self):
         return self.commands.keys()
-
-    # def add(self, name, argparser, func):
-        # self.commands[name] = Command(argparser, func)
 
     def add(self, name, command):
         self.commands[name] = command

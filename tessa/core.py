@@ -1,17 +1,17 @@
 from configparser import ConfigParser
 from datetime import datetime
-from os import mkdir, path
 from subprocess import run
+import os
 
 PROFILES_DIR = "/etc/tessa/profiles"
 
 class Profile:
-    def __init__(self, name, dirs=[], destination=None):
+    def __init__(self, name, directory, destination=None):
         # Human-readable name of this profile.
         self.name = name
 
-        # List of btrfs subvolumes to snapshot.
-        self.dirs = dirs
+        # Btrfs subvolume to snapshot.
+        self.directory = directory
 
         # Root directory for a "snapshot environment".
         self.destination = destination
@@ -43,20 +43,19 @@ class RemoteProfile:
         self.was_completed = False
 
 class Snapshot:
-    def __init__(self, path, time, dirs):
+    def __init__(self, path, time, source):
         # Containing folder of the snapshot.
         self.path = path
 
         # Time and date when this snapshot was taken.
         self.time = time
 
-        # List of btrfs subvolumes that this snapshot contains.
-        # Store dirs per snapshot so that new directories can be added after initial snapshot.
-        self.dirs = dirs
+        # Source directory of the snapshot.
+        self.source = source
 
     @property
     def id(self):
-        return path.basename(self.path)
+        return os.path.basename(self.path)
 
 def read_profile_meta(fname):
     config = ConfigParser()
@@ -64,7 +63,6 @@ def read_profile_meta(fname):
 
     try:
         data = dict(config["SETTINGS"])
-        data["dirs"] = tuple(config["DIRS"].values())
 
         profile = Profile(**data)
 
@@ -92,8 +90,8 @@ def write_profile_meta(profile, fname):
     config = ConfigParser()
     config["SETTINGS"] = {}
     config["SETTINGS"]["name"] = profile.name
+    config["SETTINGS"]["directory"] = profile.directory
     config["SETTINGS"]["destination"] = profile.destination
-    config["DIRS"] = dict(("dir\\%d" % i, dir) for i, dir in enumerate(profile.dirs))
 
     if profile.remotes is not None:
         config["REMOTES"] = {}
@@ -132,35 +130,35 @@ def write_snapshot_meta(snapshot):
     config["SETTINGS"] = {}
     config["SETTINGS"]["path"] = snapshot.path
     config["SETTINGS"]["time"] = snapshot.time
-    config["DIRS"] = dict(("dir\\%d" % i, dir) for i, dir in enumerate(snapshot.dirs))
+    config["SETTINGS"]["source"] = snapshot.source
 
-    with open("%s/snapshot.ini" % snapshot.path, "w") as file:
+    with open("%s/snapshot.ini" % snapshot.source, "w") as file:
         config.write(file)
 
+def clear_snapshot_meta(snapshot):
+    os.remove(f"{snapshot.source}/snapshot.ini")
+
 def init_profile(profile):
-    run(["btrfs", "subvolume", "create", profile.destination])
-    write_profile_meta(profile, path.join(PROFILES_DIR, profile.name))
+    if not os.path.isdir(profile.destination):
+        run(["btrfs", "subvolume", "create", profile.destination])
+    write_profile_meta(profile, os.path.join(PROFILES_DIR, profile.name))
 
 def create_snapshot(profile):
     snap_time = datetime.now()
-    snap_id = snap_time.strftime("%Y%m%d-%H%M%S")
-    snap_dir = path.join(profile.destination, snap_id)
+    snap_id = snap_time.strftime("%Y%m%d%H%M%S")
+    snap_dir = os.path.join(profile.destination, snap_id)
     log_time = snap_time.isoformat().split(".")[0]
 
     if not profile.last_snapshot:
         init_profile(profile)
 
-    # Safe to make read-only as root can still write anyways.
-    mkdir(snap_dir, 0o550)
-
-    for src in profile.dirs:
-        dst = path.join(snap_dir, path.basename(src))
-        run(["btrfs", "subvolume", "snapshot", "-r", src, dst])
-
-    snapshot = Snapshot(snap_dir, log_time, tuple(profile.dirs))
+    snapshot = Snapshot(snap_dir, log_time, profile.directory)
     profile.last_snapshot = snap_id
 
     write_snapshot_meta(snapshot)
-    write_profile_meta(profile, path.join(PROFILES_DIR, profile.name))
+    run(["btrfs", "subvolume", "snapshot", "-r", profile.directory, snap_dir])
+
+    write_profile_meta(profile, os.path.join(PROFILES_DIR, profile.name))
+    clear_snapshot_meta(snapshot)
 
     return snapshot

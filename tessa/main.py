@@ -11,9 +11,9 @@ def _write_profile(profile):
     from .core import write_profile_meta
     write_profile_meta(profile, path.join(PROFILES_DIR, profile.name))
 
-def create_profile(name, dirs, destination):
+def create_profile(name, directory, destination):
     from .core import Profile
-    profile = Profile(name, dirs, destination)
+    profile = Profile(name, directory, destination)
     _write_profile(profile)
 
 def add_remote(pname, type, path, host=None):

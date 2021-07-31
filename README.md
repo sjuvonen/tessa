@@ -14,10 +14,19 @@ No installer yet.
 Commands have to be executed as root.
 
 ### Setup a profile for snapshots
-```tessa new --name <profile> --dest <snapshot root> path [path...]```
+```sh
+tessa new --name <profile> --dest <destination> dir
+```
 
 ### List existing profiles
-```tessa list```
+```sh
+tessa list
+```
 
 ### Take a snapshot (executes btrfs sub snap)
-```tessa snap <profile>```
+```sh
+tessa snap <profile>
+```
+
+### Setting up remote backup
+Currently there is no interface for configuring send/receive targets.

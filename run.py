@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from tessa import core, main
+from tessa import core, main, remote
 
 class Command:
     def run(self):
@@ -15,11 +15,11 @@ class ProfileWizardCommand(Command):
 
         self.cmdparser.add_argument("--name", metavar="name", type=str, required=True, help="Informative name for the profile")
         self.cmdparser.add_argument("--dest", metavar="destination", type=str, required=True, help="Destination for snapshots")
-        self.cmdparser.add_argument("paths", metavar="dir", type=str, nargs="+", help="Subvolume(s) (directories) to make snapshots of")
+        self.cmdparser.add_argument("dir", metavar="dir", type=str, help="Subvolume(s) to make snapshots of")
 
     def run(self, argv):
         parsed = self.cmdparser.parse_args(argv)
-        main.create_profile(parsed.name, parsed.paths, parsed.dest)
+        main.create_profile(parsed.name, parsed.dir, parsed.dest)
 
 class ListProfilesCommand(Command):
     def __init__(self):
@@ -42,14 +42,14 @@ class CreateSnapshotCommand(Command):
 
         print(f"Snapshot {profile.name} completed")
 
-        for remote in profile.remotes:
-            if remote.last_sent:
-                parent = core.read_snapshot_meta(profile, remote.last_sent)
-                print(f"Send snapshot diff since {remote.last_sent} to remote {remote.path}")
-                core.send_snapshot(snapshot, remote, parent=parent)
+        for remote_profile in profile.remotes:
+            if remote_profile.last_sent:
+                parent = core.read_snapshot_meta(profile, remote_profile.last_sent)
+                print(f"Send snapshot diff since {remote_profile.last_sent} to remote {remote_profile.path}")
+                remote.send_snapshot(snapshot, remote_profile, parent=parent)
             else:
-                print(f"Send base snapshot to remote {remote.path}")
-                core.send_snapshot(snapshot, remote)
+                print(f"Send base snapshot to remote {remote_profile.path}")
+                remote.send_snapshot(snapshot, remote_profile)
 
 class Catalog:
     def __init__(self):

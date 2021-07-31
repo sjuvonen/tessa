@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 
 import argparse
-import sys
-
 from tessa import core, main, remote
+
 
 class Command:
     def run(self):
         pass
+
 
 class ProfileWizardCommand(Command):
     def __init__(self):
@@ -21,13 +21,14 @@ class ProfileWizardCommand(Command):
         parsed = self.cmdparser.parse_args(argv)
         main.create_profile(parsed.name, parsed.dir, parsed.dest)
 
+
 class ListProfilesCommand(Command):
     def __init__(self):
         self.cmdparser = argparse.ArgumentParser(description="List existing profiles")
 
     def run(self, argv):
-        parsed = self.cmdparser.parse_args(argv)
         print(main.list_profiles())
+
 
 class CreateSnapshotCommand(Command):
     def __init__(self):
@@ -51,6 +52,7 @@ class CreateSnapshotCommand(Command):
                 print(f"Send base snapshot to remote {remote_profile.path}")
                 remote.send_snapshot(snapshot, remote_profile)
 
+
 class Catalog:
     def __init__(self):
         self.commands = dict()
@@ -73,8 +75,7 @@ commands.add("new", ProfileWizardCommand())
 commands.add("list", ListProfilesCommand())
 commands.add("snap", CreateSnapshotCommand())
 
-cmdparser = argparse.ArgumentParser(description="Tessa (for incremental btrfs snapshots)")
-
+cmdparser = argparse.ArgumentParser(description="Tessa is for incremental btrfs snapshots)")
 cmdparser.add_argument("command", type=str, choices=commands.list())
 
 parsed, others = cmdparser.parse_known_args()

@@ -5,6 +5,7 @@ import os
 
 PROFILES_DIR = "/etc/tessa/profiles"
 
+
 class Profile:
     def __init__(self, name, directory, destination=None):
         # Human-readable name of this profile.
@@ -21,6 +22,7 @@ class Profile:
 
         # List of RemoteProfile instances.
         self.remotes = []
+
 
 class RemoteProfile:
     TYPE_LOCAL = "local"
@@ -39,8 +41,10 @@ class RemoteProfile:
         # Name of last snapshot that was sent.
         self.last_sent = None
 
-        # True := Sending snapshot was completed; False := Transfer was interrupted.
+        # True := Sending snapshot was completed; False := Transfer was
+        # interrupted.
         self.was_completed = False
+
 
 class Snapshot:
     def __init__(self, path, time, source):
@@ -56,6 +60,7 @@ class Snapshot:
     @property
     def id(self):
         return os.path.basename(self.path)
+
 
 def read_profile_meta(fname):
     config = ConfigParser()
@@ -78,13 +83,13 @@ def read_profile_meta(fname):
 
             profile.remotes = tuple(RemoteProfile(**data) for data in remotes)
 
-
         if "SNAPSHOT" in config:
             profile.last_snapshot = config["SNAPSHOT"]["last_snapshot"]
 
         return profile
     except KeyError:
         raise ValueError("Could not read profile from %s" % fname)
+
 
 def write_profile_meta(profile, fname):
     config = ConfigParser()
@@ -114,6 +119,7 @@ def write_profile_meta(profile, fname):
     with open(fname, "w") as file:
         config.write(file)
 
+
 def read_snapshot_meta(profile, snap_id):
     config = ConfigParser()
     config.read("%s/%s/snapshot.ini" % (profile.destination, snap_id))
@@ -123,7 +129,9 @@ def read_snapshot_meta(profile, snap_id):
         data["dirs"] = tuple(config["DIRS"].values())
         return Snapshot(**data)
     except KeyError:
-        raise ValueError("Could not read snapshot from %s/%s/snapshot.ini" % (profile.destination, snap_id))
+        raise ValueError("Could not read snapshot from %s/%s/snapshot.ini"
+                         % (profile.destination, snap_id))
+
 
 def write_snapshot_meta(snapshot):
     config = ConfigParser()
@@ -135,13 +143,16 @@ def write_snapshot_meta(snapshot):
     with open("%s/snapshot.ini" % snapshot.source, "w") as file:
         config.write(file)
 
+
 def clear_snapshot_meta(snapshot):
     os.remove(f"{snapshot.source}/snapshot.ini")
+
 
 def init_profile(profile):
     if not os.path.isdir(profile.destination):
         run(["btrfs", "subvolume", "create", profile.destination])
     write_profile_meta(profile, os.path.join(PROFILES_DIR, profile.name))
+
 
 def create_snapshot(profile):
     snap_time = datetime.now()

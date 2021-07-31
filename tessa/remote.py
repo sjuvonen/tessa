@@ -1,6 +1,5 @@
-from os import path
-from shutil import copyfile
 import subprocess
+
 
 def send_snapshot(snapshot, remote_profile, parent=None):
     methods = {
@@ -10,6 +9,7 @@ def send_snapshot(snapshot, remote_profile, parent=None):
 
     func = methods[remote_profile.type]
     func(snapshot, remote_profile, parent)
+
 
 def send_snapshot_local(snapshot, remote_profile, parent=None):
     """Send/receive a snapshot to a another disk on the same machine.
@@ -30,7 +30,8 @@ def send_snapshot_local(snapshot, remote_profile, parent=None):
 
     # https://stackoverflow.com/questions/7353054/running-a-command-line-containing-pipes-and-displaying-result-to-stdout
     send = subprocess.Popen(send_args, stdout=subprocess.PIPE)
-    recv = subprocess.Popen(["btrfs", "receive", remote_profile.path], stdin=send.stdout, stdout=subprocess.PIPE)
+    recv = subprocess.Popen(["btrfs", "receive", remote_profile.path],
+                            stdin=send.stdout, stdout=subprocess.PIPE)
 
     send.stdout.close()
     output, err = recv.communicate()
@@ -38,11 +39,13 @@ def send_snapshot_local(snapshot, remote_profile, parent=None):
     # Do this last to mark that the snapshot succeeded.
     remote_profile.last_sent = snapshot.id
 
+
 ##
-# Thos method has not been tested since refactoring the code and changing storage
-# logic!!!
+# Thos method has not been tested since refactoring the code and changing
+# storage logic!!!
 def send_snapshot_ssh(snapshot, remote_profile, parent=None):
-    """Send/receive a snapshot to a another machine over SSH. Root access is required.
+    """Send/receive a snapshot to a another machine over SSH. Root access is
+    required.
 
     Keyword arguments:
     snapshot -- the Snapshot instance to transfer
@@ -52,8 +55,10 @@ def send_snapshot_ssh(snapshot, remote_profile, parent=None):
 
     login = "root@%s" % remote_profile.host
 
-    # NOTE: Run these separately so that "sub create" can fail without affecting the latter command.
-    subprocess.run(["ssh", login, "btrfs subvolume create %s" % remote_profile.path])
+    # NOTE: Run these separately so that "sub create" can fail without
+    # affecting the latter command.
+    subprocess.run(["ssh", login,
+                    f"btrfs subvolume create {remote_profile.path}"])
 
     send_args = ["btrfs", "send", snapshot.path]
 
@@ -62,7 +67,9 @@ def send_snapshot_ssh(snapshot, remote_profile, parent=None):
         send_args.insert(len(send_args)-1, parent.path)
 
     send = subprocess.Popen(send_args, stdout=subprocess.PIPE)
-    recv = subprocess.Popen(["ssh", login, "btrfs receive %s" % remote_profile.path], stdin=send.stdout, stdout=subprocess.PIPE)
+    recv = subprocess.Popen(["ssh", login,
+                            f"btrfs receive {remote_profile.path}"],
+                            stdin=send.stdout, stdout=subprocess.PIPE)
 
     send.stdout.close()
     output, err = recv.communicate()
